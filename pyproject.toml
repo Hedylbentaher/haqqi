@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "haqqi"
+version = "0.1.0"
+description = "Assistant trilingue (AR/FR/EN) du Code du travail tunisien"
+requires-python = ">=3.10"
+dependencies = ["pymupdf>=1.24"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

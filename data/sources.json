@@ -1,0 +1,49 @@
+{
+  "documents": [
+    {
+      "doc_id": "ct_ar",
+      "file": "code_travail_ar",
+      "lang": "ar",
+      "kind": "code",
+      "code": "ct",
+      "version": "edition_2004",
+      "date": "2004-01-01",
+      "title": "مجلة الشغل (طبعة المطبعة الرسمية 2004)",
+      "source": "https://wrcati.cawtar.org/assets/documents/pdf/CT.pdf"
+    },
+    {
+      "doc_id": "ct_fr",
+      "file": "code_travail_fr",
+      "lang": "fr",
+      "kind": "code",
+      "code": "ct",
+      "version": "revision_1996",
+      "date": "1996-07-15",
+      "title": "Code du travail (codification révisée au 15 juillet 1996)",
+      "source": "Série législative : loi n° 66-27 dans sa teneur révisée au 15 juillet 1996"
+    },
+    {
+      "doc_id": "loi_2025_9_ar",
+      "file": "loi_2025_9_ar",
+      "lang": "ar",
+      "kind": "amending_law",
+      "code": "loi_2025_9",
+      "target_code": "ct",
+      "version": "loi_2025_9",
+      "date": "2025-05-21",
+      "title": "القانون عدد 9 لسنة 2025 مؤرخ في 21 ماي 2025 يتعلق بتنظيم عقود الشغل ومنع المناولة",
+      "source": "JORT n° 61 du 23 mai 2025, p. 1675"
+    },
+    {
+      "doc_id": "c138_en",
+      "file": "convention_138_en",
+      "lang": "en",
+      "kind": "convention",
+      "code": "c138",
+      "version": "oit_1973",
+      "date": "1973-06-26",
+      "title": "ILO Convention No. 138 concerning Minimum Age for Admission to Employment (1973), ratifiée par la Tunisie le 19 octobre 1995",
+      "source": "Texte officiel anglais de l'OIT (copie publiée par le Parlement australien : aphref.aph.gov.au, ilo_138_age_text.pdf)"
+    }
+  ]
+}
