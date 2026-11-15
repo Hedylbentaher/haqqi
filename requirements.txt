@@ -1,2 +1,26 @@
+# Haqqi — dépendances (Python 3.10 ou plus)
+
+# Étape 1 — ingestion des PDF
 pymupdf>=1.24
-pytest>=8
+
+# Étape 2 — recherche hybride
+numpy>=1.26
+sentence-transformers>=3.0        # modèle multilingue intfloat/multilingual-e5-small
+
+# Étape 3 — agent
+langchain-core>=1.0
+langchain>=1.0
+langgraph>=1.0
+langchain-google-genai>=2.0       # Gemini (clé gratuite)
+langchain-groq>=0.3               # Groq (autre option gratuite)
+python-dotenv>=1.0
+
+# Étape 4 — MCP
+mcp[cli]>=1.9,<2
+langchain-mcp-adapters>=0.1,<0.4
+
+# Étape 5 — interface web
+streamlit>=1.40
+
+# Tests (pytest 9.2 a un bug avec Python 3.10.0 : on reste en version 8)
+pytest>=8,<9
