@@ -59,4 +59,7 @@ def compare_versions(article_key: str) -> list[dict]:
 
 
 if __name__ == "__main__":
+    # On charge les fiches, le modèle e5 et le LLM AVANT d'écouter le client.
+    # Sous Windows, charger torch pendant que le serveur lit déjà le client peut bloquer.
+    service.get_agent()
     mcp.run()   # transport stdio
