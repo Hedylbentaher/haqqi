@@ -15,7 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from . import config
-from .agent.graph import HaqqiAgent, label_for
+from .agent.graph import HaqqiAgent, expand_abbreviations, label_for
 from .ingestion.pipeline import ingest
 from .retrieval.embeddings import HashEmbedder, VectorIndex, get_embedder
 from .retrieval.hybrid import Retriever
@@ -57,9 +57,17 @@ def search_by_language(query: str, doc_language: str = "", k: int = 5,
     mode = "hybrid"
     if retriever.vectors is None or isinstance(retriever.vectors.embedder, HashEmbedder):
         mode = "bm25"
-    hits = retriever.search(query, k=k, mode=mode, lang=doc_language or None,
+    hits = retriever.search(expand_abbreviations(query), k=k, mode=mode, lang=doc_language or None,
                             current_only=not include_old_versions)
-    return [_short(h.record) | {"score": round(h.score, 4), "ranks": h.ranks} for h in hits]
+    return [_short(h.record) | _history(retriever.store, h.article_key)
+            | {"score": round(h.score, 4), "ranks": h.ranks} for h in hits]
+
+
+def _history(store: ArticleStore, article_key: str) -> dict:
+    """Combien de versions a l'article, et quelle loi l'a modifié (signal pour l'agent à outils)."""
+    versions = store.versions(article_key)
+    laws = sorted({v["version"] for v in versions if v.get("source_kind") == "amending_law"})
+    return {"n_versions": len(versions), "changed_by": laws}
 
 
 def get_article(article_key: str, lang: str = "") -> list[dict]:

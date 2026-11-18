@@ -24,6 +24,7 @@ def search_by_language(query: str, doc_language: str = "", k: int = 5,
     doc_language: langue des documents à fouiller : "ar", "fr", "en", ou "" pour toutes.
     k: nombre d'articles à renvoyer.
     include_old_versions: true pour inclure les versions remplacées (avant la loi 2025-9).
+    Chaque résultat indique changed_by : la ou les lois qui ont modifié l'article (ex. ["loi_2025_9"]).
     """
     return service.search_by_language(query, doc_language, k, include_old_versions)
 
@@ -54,7 +55,11 @@ def get_article(article_key: str, lang: str = "") -> list[dict]:
 
 @mcp.tool()
 def compare_versions(article_key: str) -> list[dict]:
-    """Compare les versions d'un article : texte d'avant et texte en vigueur (ex. ct:6-4 et la loi 2025-9)."""
+    """Compare les versions d'un article : texte d'avant et texte en vigueur (ex. ct:6-4 et la loi 2025-9).
+
+    À utiliser pour toute question sur un changement, une réforme, la loi 2025-9 ou « avant / après »,
+    sur chaque article dont le champ changed_by n'est pas vide.
+    """
     return service.compare_versions(article_key)
 
 

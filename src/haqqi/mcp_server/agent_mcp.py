@@ -23,14 +23,18 @@ from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 
+from ..agent.graph import _CITE
 from ..agent.llm import get_chat_model
 
 PROMPT = """Tu es Haqqi, un assistant sur le droit du travail tunisien.
 Utilise les outils pour trouver les articles AVANT de répondre :
 - search_by_language pour chercher (laisse doc_language vide pour chercher dans toutes les langues) ;
-- get_article ou compare_versions si un article précis ou un changement de loi est demandé.
-Réponds dans la langue de la question, en citant les clés d'articles entre crochets, ex. [ct:6-4].
-N'invente rien : si les outils ne trouvent rien, dis-le."""
+- get_article si un article précis est demandé.
+Si la question porte sur un changement (réforme, loi 2025-9, « avant / après », « qu'est-ce qui a changé ») :
+- appelle compare_versions sur chaque article trouvé dont le champ changed_by n'est pas vide, AVANT de répondre ;
+- ne dis jamais qu'il n'y a « aucun changement » sans avoir appelé compare_versions.
+Les articles peuvent être en arabe : lis-les et réponds quand même dans la langue de la question.
+Cite les clés d'articles entre crochets, ex. [ct:6-4]. N'invente rien : si les outils ne trouvent rien, dis-le."""
 
 
 def mcp_client() -> MultiServerMCPClient:
@@ -50,7 +54,19 @@ async def run(question: str, llm=None) -> dict:
         agent = create_agent(llm, tools, system_prompt=PROMPT)
         result = await agent.ainvoke({"messages": [("user", question)]})
     calls = [(tc["name"], tc["args"]) for m in result["messages"] for tc in (getattr(m, "tool_calls", None) or [])]
-    return {"answer": result["messages"][-1].text, "tool_calls": calls, "messages": result["messages"]}
+    answer, warnings = verify_citations(result["messages"][-1].text, result["messages"])
+    return {"answer": answer, "tool_calls": calls, "messages": result["messages"], "warnings": warnings}
+
+
+def verify_citations(answer: str, messages: list) -> tuple[str, list[str]]:
+    """Comme la case « vérification » du graphe : une clé citée doit venir des résultats des outils."""
+    seen = " ".join(str(m.content) for m in messages if getattr(m, "type", "") == "tool")
+    warnings = []
+    for key in set(_CITE.findall(answer)):
+        if f'"{key}"' not in seen and f"'{key}'" not in seen:
+            answer = answer.replace(f"[{key}]", "")
+            warnings.append(f"Citation supprimée : [{key}] ne vient d'aucun outil.")
+    return answer, warnings
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -62,6 +78,8 @@ def main(argv: list[str] | None = None) -> None:
     for name, a in out["tool_calls"]:
         print(f"  • {name}({a})")
     print("\nRéponse :\n" + str(out["answer"]))
+    for w in out["warnings"]:
+        print(f"⚠ {w}")
 
 
 if __name__ == "__main__":
