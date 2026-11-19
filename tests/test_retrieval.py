@@ -134,3 +134,16 @@ def test_citation_label():
         "Code du travail, art. 6-4 (loi_2025_9, ar)"
     assert citation_label({"article_key": "c138:2", "version": "oit_1973", "lang": "en"}).startswith(
         "Convention OIT n° 138, art. 2")
+    
+
+def test_bm25_is_skipped_when_the_question_language_is_rare(store):
+    # 1 texte anglais sur 13 (moins de 10 %) : pour une question anglaise, vecteurs seuls
+    extra = [rec("ct_fr", f"ct:{200 + i}", "fr", f"Article {i} sur le salaire et la durée du travail.")
+             for i in range(8)]
+    r = make_retriever(ArticleStore(store.records + extra))
+    question = "What is the minimum age for employment?"
+    assert all(set(h.ranks) == {"vector"} for h in r.search(question, k=3, mode="hybrid"))
+    assert any("bm25" in h.ranks for h in r.search(question, k=3, mode="hybrid_fixed"))
+    # une question française garde BM25, et le filtre lang="en" rend l'anglais majoritaire
+    assert "bm25" in r.search("congé annuel payé", k=1, mode="hybrid")[0].ranks
+    assert any("bm25" in h.ranks for h in r.search(question, k=1, mode="hybrid", lang="en"))
