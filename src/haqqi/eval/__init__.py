@@ -1,0 +1,1 @@
+"""Étape 6 — Évaluation : recherche (Recall@k, MRR) et réponses (citations, langue, faits)."""
