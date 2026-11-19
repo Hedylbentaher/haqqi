@@ -61,7 +61,7 @@ On compare les 3 méthodes : **BM25**, **vecteurs**, **hybride**, par langue et 
 ## 5. Commandes
 
 ```bash
-python -m haqqi.eval.run                        # recherche : bm25, vector, hybrid
+python -m haqqi.eval.run                        # recherche : bm25, vector, hybrid_fixed, hybrid
 python -m haqqi.eval.run --generation           # + réponses (LLM du fichier .env), 10 à 20 min
 ```
 
@@ -120,14 +120,96 @@ multilingue doit résoudre (comparer avec `results/summary.md`).
 5. **Les questions Code + Convention plafonnent à 44,4 %** : il faut trouver 2 articles, et la recherche
    n'en trouve souvent qu'un.
 
-**Pistes d'amélioration :** pondérer BM25 selon la langue de la question ; traduire la question en
-arabe avant la recherche ; un modèle d'embeddings plus grand (e5-base, e5-large).
-
-Les résultats des réponses (e5 + Gemini) sont dans `results/summary.md` (étape 6.4).
+**Pistes d'amélioration :** pondérer BM25 selon la langue de la question (réalisé : section 9) ;
+traduire la question en arabe avant la recherche ; un modèle d'embeddings plus grand (e5-base, e5-large).
 
 ---
 
-## 8. Questions possibles du jury → réponses types
+## 8. Résultats des réponses avec Gemini (étape 6.4)
+
+Commande : `python -m haqqi.eval.run --generation` · LLM `gemini-flash-lite-latest` ·
+1,38 seconde par question · 0 réponse « LLM indisponible ».
+
+| Mesure (69 questions avec réponse) | sans LLM | Gemini |
+|---|---|---|
+| Au moins une citation correcte | 46,4 % | **68,1 %** |
+| Précision des citations | 24,6 % | **57,5 %** |
+| Information attendue présente | 50,0 % | **68,2 %** |
+| Réponse dans la langue de la question | 89,7 % | **100 %** |
+| Questions hors sujet : refus (9 questions) | 0 % | **100 %** |
+
+| Langue | Citation correcte | Information présente | Bonne langue | Sans citation (sur 23) |
+|---|---|---|---|---|
+| arabe | 91,3 % | 86,4 % | 100 % | 1 |
+| français | 69,6 % | 77,3 % | 100 % | 6 |
+| anglais | 43,5 % | 40,9 % | 100 % | 12 |
+
+| Les 69 réponses | Nombre |
+|---|---|
+| Au moins un bon article cité | 47 |
+| Seulement de mauvais articles (q01-ar, q02-en, q11-fr) | 3 |
+| Aucun article cité : l'agent dit qu'il n'a pas trouvé | 19 |
+
+**Ce qu'on en tire :**
+1. **Gemini améliore toutes les mesures** : citation correcte +21,7 points, information présente
+   +18,2 points, bonne langue 100 %, et les 9 questions hors sujet sont refusées.
+2. **Quand l'agent cite, il a presque toujours raison** : un bon article dans 47 réponses sur 50 (94 %).
+   La précision (57,5 %) compte 0 pour une réponse sans citation ; sur les 50 réponses qui citent,
+   environ 79 % des articles cités sont bons.
+3. **L'agent préfère s'abstenir plutôt qu'inventer** : 19 réponses sans citation, dont 12 en anglais.
+   La limite vient surtout de la recherche (Recall@5 = 50 % en anglais), pas du LLM : la vérification
+   des citations empêche de citer un article absent des résultats.
+4. **Par type de question** : citation correcte 80 % pour les questions factuelles (36/45), 55,6 % pour
+   les questions Code + Convention (5/9), 40 % pour les questions de version (6/15).
+
+---
+
+## 9. Amélioration : BM25 selon la langue de la question (étape 6.5)
+
+**Problème (section 7, conclusion 3)** : en anglais, BM25 ne trouve que les 18 fiches de la
+Convention 138 (1,7 % du corpus) et les fait remonter dans la fusion.
+
+**Règle** (`bm25_useful()` dans `retrieval/hybrid.py`) :
+```
+part des textes cherchés dans la langue de la question ≥ 10 % ?
+   oui (arabe 50 %, français 48 %) → BM25 + vecteurs, comme avant
+   non (anglais 2 %)               → vecteurs seuls
+```
+Le mode `hybrid_fixed` garde l'ancienne fusion pour comparer.
+
+**Prédiction puis mesure** : rien ne change en arabe et en français, et en anglais le nouvel hybride
+donne le classement des vecteurs. L'effet a donc été calculé à l'avance avec `retrieval_details.jsonl`,
+puis mesuré : chiffres identiques.
+
+| Recherche | hybride fixe (avant) | hybride selon la langue (après) |
+|---|---|---|
+| Recall@1 | 39,1 % | **43,5 %** |
+| Recall@3 | **62,3 %** | 61,6 % |
+| Recall@5 | 65,2 % | **67,4 %** |
+| Recall@10 | 71,0 % | **73,9 %** |
+| MRR | 0,549 | **0,576** |
+| Recall@5 en anglais | 43,5 % | **50,0 %** |
+| Recall@5, Code + Convention | **44,4 %** | 38,9 % |
+
+| Réponses (Gemini) | avant | après |
+|---|---|---|
+| Citation correcte | 68,1 % | **72,5 %** |
+| Information présente | 68,2 % | **75,8 %** |
+| Citation correcte en anglais | 43,5 % | **52,2 %** |
+| Bon article / mauvais / aucun (sur 69) | 47 / 3 / 19 | 50 / 8 / 11 |
+
+**Ce qu'on en tire :**
+1. L'hybride a maintenant le meilleur Recall@1 et le meilleur MRR des quatre méthodes.
+2. Le gain anglais suit la recherche : les 3 questions que la recherche trouve désormais (q07-en,
+   q09-en, q23-en) ont une citation correcte ; la question perdue (q08-en) a une mauvaise citation.
+3. **Le LLM varie** : en arabe et en français, les fiches trouvées sont identiques, mais 5 réponses ont
+   changé entre les deux exécutions. Un écart de 1 ou 2 questions par langue n'est pas significatif.
+4. Contreparties : une question Code + Convention en anglais perd l'article de la C138, et l'agent
+   s'abstient moins (19 → 11) mais se trompe plus (3 → 8).
+
+---
+
+## 10. Questions possibles du jury → réponses types
 
 **Q : Pourquoi 78 questions et pas des questions générées automatiquement ?**
 R : Le cours demande au moins 50 questions. Nous les avons écrites et vérifiées à la main
@@ -139,9 +221,26 @@ R : Pour mesurer si l'agent sait dire « je ne sais pas » au lieu d'inventer un
 
 **Q : Quelle est la limite de votre évaluation ?**
 R : 23 sujets seulement ; la vérification de l'information attendue se fait par mots-clés
-et pas par un juge humain ; et le quota gratuit du LLM limite le nombre d'essais.
+et pas par un juge humain ; le quota gratuit du LLM limite le nombre d'essais (deux exécutions),
+alors que le LLM varie d'une exécution à l'autre.
 
-**Q : Pourquoi votre méthode hybride n'est-elle pas la meilleure ?**
+**Q : Pourquoi l'hybride était-il d'abord moins bon que e5 seul ?**
 R : Pour les questions anglaises, BM25 ne trouve que les articles de la Convention 138, nos seuls textes
 anglais : il ajoute du bruit, et RRF lui donne le même poids qu'au modèle multilingue. L'hybride reste le
-meilleur pour classer en arabe (MRR 0,773). Une amélioration serait de pondérer BM25 selon la langue.
+meilleur pour classer en arabe (MRR 0,773). Nous avons donc ajouté une règle de langue (section 9) :
+l'hybride passe à 67,4 % et obtient le meilleur MRR (0,576).
+
+**Q : Comment savez-vous que le gain vient de la règle et pas du hasard ?**
+R : La recherche est déterministe : nous avons calculé l'effet avant le test, puis la mesure a donné
+exactement les mêmes chiffres. Pour les réponses, c'est moins sûr : le LLM varie (5 réponses ont changé
+en arabe et en français avec les mêmes fiches). Il faudrait plusieurs exécutions pour le confirmer.
+
+**Q : 72,5 % de citations correctes, n'est-ce pas faible ?**
+R : Sur 69 réponses, 50 citent un bon article, 11 disent « je n'ai pas trouvé » au lieu d'inventer,
+et 8 citent un mauvais article. Quand l'agent cite, il a raison 50 fois sur 58 (86 %). Pour un assistant
+juridique, une abstention est moins grave qu'une mauvaise citation : c'est la mesure à surveiller.
+
+**Q : Pourquoi l'anglais reste-t-il le point faible ?**
+R : Le seul texte anglais est la Convention 138 ; tout le Code est en arabe et en français. Une question
+anglaise dépend donc entièrement du modèle multilingue, qui ne trouve le bon article dans les
+5 premiers résultats qu'une fois sur deux (Recall@5 = 50 %).
