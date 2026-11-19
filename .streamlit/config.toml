@@ -1,0 +1,23 @@
+# Apparence de l'interface Haqqi (lu automatiquement par « streamlit run »).
+# Couleurs reprises de la présentation : encre, rouge tunisien, vert « en vigueur ».
+
+[theme]
+base = "light"
+primaryColor = "#B4232A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#EEF1EE"
+textColor = "#14212D"
+font = "IBM Plex Sans Arabic:https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap"
+headingFont = "Cairo:https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap"
+borderColor = "#D5DBD6"
+baseRadius = "8px"
+
+[theme.sidebar]
+backgroundColor = "#14212D"
+secondaryBackgroundColor = "#1F3040"
+textColor = "#E6EAEE"
+primaryColor = "#F0A49C"
+borderColor = "#2E4152"
+
+[client]
+toolbarMode = "minimal"
